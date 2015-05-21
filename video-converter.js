@@ -49,38 +49,75 @@ Converter.prototype = {
         var dest = path.dirname(this._files[i]);
         return this._getCameraModel(this._files[i])
             .then(function (model) {
+                // Видео с айфона по-умолчанию поворачиваются на 90 градусов
                 var rotate = false;
                 if (model.indexOf('iPhone') !== -1) {
                     rotate = true;
                 }
+                // for debug not convert files
+                // var destinationFile = dest + '/' + path.basename(this._files[i], path.extname(this._files[i])) + '.mp4';
+                // return vow.resolve({source: this._files[i], destination: dest, destinationFile: destinationFile});
                 return this._convert(this._files[i], dest, rotate);
             }, this)
-            .then(function () {
+            .then(function (files) {
                 var defer = vow.defer();
-                fs.stat(dest  + '/' + path.basename(this._files[i], path.extname(this._files[i])) + '.mp4', function (err, stats) {
+                // Проверка наличия обеих файлов
+                fs.stat(files.destinationFile, function (err, stats) {
                     if (err) {
                         throw new Error(err);
                     }
                     if (stats.isFile()) {
-                        fs.stat(this._files[i], function (err, statsMov) {
+                        fs.stat(files.source, function (err, statsMov) {
                             if (err) {
                                 throw new Error(err);
                             }
                             if (statsMov.isFile()) {
-                                fs.unlink(this._files[i], function () {
-                                    defer.resolve(1);
-                                });
+                                defer.resolve({source: 
+                                    {
+                                        path: files.source,
+                                        size: statsMov.size
+                                    }, 
+                                    destination: files.destination, 
+                                    destinationFile: {
+                                            path: files.destinationFile,
+                                            size: stats.size
+                                        }
+                                    });
                             }
-                        }.bind(this));
+                        });
                     }
-                }.bind(this));
+                });
                 return defer.promise();
             }, this)
+            .then(function(files) {
+                var defer = vow.defer();
+
+                // Источник MOV весит больше назначения mp4 
+                if (files.source.size > files.destinationFile.size) {
+                    // Удаленим файл MOV
+                    console.log('delete %s', files.source.path);
+                    fs.unlink(files.source.path, function () {
+                        defer.resolve(1);
+                    });    
+                } else {
+                    // Скомпиленый mp4 весит больше чем MOV, удалим mp4, а потом скопирнем MOV -> mp4, а потом удалим исходный MOV
+                    console.log('delete %s', files.destinationFile.path);
+                    console.log('copy %s -> ', files.source.path, files.destinationFile.path);
+                    fs.unlink(files.destinationFile.path, function () {
+                        fs.createReadStream(files.source.path).pipe(fs.createWriteStream(files.destinationFile.path));
+                        // удалим MOV чтобы не было дублей
+                        fs.unlink(files.source.path, function () {
+                            defer.resolve(1);
+                        });
+                    });
+                    
+                }
+                
+                return defer.promise();
+            })
             .then(function () {
                 this._current++;
                 if ($all === true && (this._current <= this._files.length - 1)) {
-                    //var i = this._current;
-                    //var dest = path.dirname(this._files[i]);
                     return this._convertRecursive();
                 } else {
                     return vow.resolve();
@@ -99,13 +136,13 @@ Converter.prototype = {
     _convert: function (source, destination, rotate) {
         var defer = vow.defer();
         var spawn = require('child_process').spawn;
+        var destinationFile = destination + '/' + path.basename(source, path.extname(source)) + '.mp4';
 
-        console.log('converting %s -> %s', source, destination + '/' + path.basename(source, path.extname(source)) +
-            '.mp4');
-
+        console.log('converting %s -> %s', source, destinationFile);
+        
         var params = [
             '-i', source,
-            '-o', destination + '/' + path.basename(source, path.extname(source)) + '.mp4',
+            '-o', destinationFile,
             //'-m',
             //'-E', 'copy',
             '--audio-copy-mask', 'ac3,dts,dtshd',
@@ -122,23 +159,17 @@ Converter.prototype = {
             //params.push('4');
 
             // можно просто скопировать если не хочется париться с конвертирование iPhone видео
-            fs.createReadStream(source).pipe(fs.createWriteStream(destination + '/' + path.basename(source, path.extname(source)) + '.mp4'));
-            return vow.resolve(1);
+            fs.createReadStream(source).pipe(fs.createWriteStream(destinationFile));
+            defer.resolve({source: source, destination: destination, destinationFile: destinationFile});
         } else {
 
             var child = spawn('HandBrakeCLI', params);
 
-            var completed = false;
             child.stdout.on('data', function (chunk) {
                 var output = chunk.toString();
 
                 if ($verbose) {
                     console.log("output = ", output);
-                }
-
-                var o = output.replace(/\s/gi, '');
-                if (o.indexOf('thismaytakeawhile') !== -1 || o.indexOf('ETA00h00m00s') !== -1) {
-                    completed = true;
                 }
             });
 
@@ -150,10 +181,9 @@ Converter.prototype = {
 
             child.on('close', function (code) {
                 if (code === 0) {
-                    completed = false;
-                    defer.resolve('complete ' + destination);
+                    defer.resolve({source: source, destination: destination, destinationFile: destinationFile});
                 } else {
-                    defer.reject('Process exited with code = ' + code + ', but not completed');
+                    defer.reject('Process exited with code = ' + code);
                 }
             });
         }
@@ -184,7 +214,7 @@ Converter.prototype = {
             if (code === 0) {
                 defer.resolve(model);
             } else {
-                defer.reject('Process exited with code = ' + code + ', but not completed');
+                defer.reject('_getCameraModel Process exited with code = ' + code);
             }
         });
 
