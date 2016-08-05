@@ -28,14 +28,14 @@ var Converter = function () {
         .then(function (files) {
             this._files = files;
             return this._convertRecursive();
-        }, this)
-        .fail(function (e) {
+        }.bind(this))
+        .catch(function (e) {
             var currentFile = this._files[this._current];
             var dest = path.dirname(currentFile);
             fs.unlink(dest + '/' + path.basename(currentFile, path.extname(currentFile)) + '.mp4', function () {});
             throw new Error(e);
-        }, this)
-        .done(function () {
+        }.bind(this))
+        .then(function () {
             console.log('Files converted');
         });
 };
@@ -57,73 +57,73 @@ Converter.prototype = {
                 }
                 // for debug not convert files
                 // var destinationFile = dest + '/' + path.basename(this._files[i], path.extname(this._files[i])) + '.mp4';
-                // return vow.resolve({source: this._files[i], destination: dest, destinationFile: destinationFile});
+                // return new Promise(function(resolve) {resolve({source: this._files[i], destination: dest, destinationFile: destinationFile})}.bind(this));
                 return this._convert(this._files[i], dest, rotate);
-            }, this)
+            }.bind(this))
             .then(function (files) {
-                var defer = vow.defer();
-                // Проверка наличия обеих файлов
-                fs.stat(files.destinationFile, function (err, stats) {
-                    if (err) {
-                        throw new Error(err);
-                    }
-                    if (stats.isFile()) {
-                        fs.stat(files.source, function (err, statsMov) {
-                            if (err) {
-                                throw new Error(err);
-                            }
-                            if (statsMov.isFile()) {
-                                defer.resolve({source: 
-                                    {
-                                        path: files.source,
-                                        size: statsMov.size
-                                    }, 
-                                    destination: files.destination, 
-                                    destinationFile: {
+                return new Promise(function (resolve) {
+                    // Проверка наличия обеих файлов
+                    fs.stat(files.destinationFile, function (err, stats) {
+                        if (err) {
+                            throw new Error(err);
+                        }
+                        if (stats.isFile()) {
+                            fs.stat(files.source, function (err, statsMov) {
+                                if (err) {
+                                    throw new Error(err);
+                                }
+                                if (statsMov.isFile()) {
+                                    resolve({
+                                        source: {
+                                            path: files.source,
+                                            size: statsMov.size
+                                        },
+                                        destination: files.destination,
+                                        destinationFile: {
                                             path: files.destinationFile,
                                             size: stats.size
                                         }
                                     });
-                            }
+                                }
+                            });
+                        }
+                    });
+                });
+            }.bind(this))
+            .then(function(files) {
+                return new Promise(function (resolve) {
+                    // Источник MOV весит больше назначения mp4
+                    if (files.source.size > files.destinationFile.size) {
+                        // Удаленим файл MOV
+                        console.log('delete %s', files.source.path);
+                        fs.unlink(files.source.path, function () {
+                            resolve(1);
                         });
+                    } else {
+                        // Скомпиленый mp4 весит больше чем MOV, удалим mp4, а потом скопирнем MOV -> mp4, а потом удалим исходный MOV
+                        console.log('delete %s', files.destinationFile.path);
+                        console.log('copy %s -> ', files.source.path, files.destinationFile.path);
+                        fs.unlink(files.destinationFile.path, function () {
+                            fs.createReadStream(files.source.path).pipe(fs.createWriteStream(files.destinationFile.path));
+                            // удалим MOV чтобы не было дублей
+                            fs.unlink(files.source.path, function () {
+                                resolve(1);
+                            });
+                        });
+
                     }
                 });
-                return defer.promise();
-            }, this)
-            .then(function(files) {
-                var defer = vow.defer();
-
-                // Источник MOV весит больше назначения mp4 
-                if (files.source.size > files.destinationFile.size) {
-                    // Удаленим файл MOV
-                    console.log('delete %s', files.source.path);
-                    fs.unlink(files.source.path, function () {
-                        defer.resolve(1);
-                    });    
-                } else {
-                    // Скомпиленый mp4 весит больше чем MOV, удалим mp4, а потом скопирнем MOV -> mp4, а потом удалим исходный MOV
-                    console.log('delete %s', files.destinationFile.path);
-                    console.log('copy %s -> ', files.source.path, files.destinationFile.path);
-                    fs.unlink(files.destinationFile.path, function () {
-                        fs.createReadStream(files.source.path).pipe(fs.createWriteStream(files.destinationFile.path));
-                        // удалим MOV чтобы не было дублей
-                        fs.unlink(files.source.path, function () {
-                            defer.resolve(1);
-                        });
-                    });
-                    
-                }
-                
-                return defer.promise();
             })
             .then(function () {
                 this._current++;
                 if ($all === true && (this._current <= this._files.length - 1)) {
                     return this._convertRecursive();
                 } else {
-                    return vow.resolve();
+                    return new Promise(function (resolve) {
+                        resolve();
+                    });
                 }
-            }, this);
+            }.bind(this));
     },
 
     /**
@@ -135,12 +135,8 @@ Converter.prototype = {
      * @returns {Promise}
      */
     _convert: function (source, destination, rotate) {
-        var defer = vow.defer();
-        var spawn = require('child_process').spawn;
         var destinationFile = destination + '/' + path.basename(source, path.extname(source)) + '.mp4';
-
         console.log('converting %s -> %s', source, destinationFile);
-        
         var params = [
             '-i', source,
             '-o', destinationFile,
@@ -155,41 +151,41 @@ Converter.prototype = {
             //'--keep-display-aspect'
         ];
 
-        if (rotate) {
-            //params.push('--rotate');
-            //params.push('4');
+        return new Promise(function (resolve, reject) {
+            if (rotate) {
+                //params.push('--rotate');
+                //params.push('4');
 
-            // можно просто скопировать если не хочется париться с конвертирование iPhone видео
-            fs.createReadStream(source).pipe(fs.createWriteStream(destinationFile));
-            defer.resolve({source: source, destination: destination, destinationFile: destinationFile});
-        } else {
+                // можно просто скопировать если не хочется париться с конвертирование iPhone видео
+                fs.createReadStream(source).pipe(fs.createWriteStream(destinationFile));
+                resolve({source: source, destination: destination, destinationFile: destinationFile});
+            } else {
+                var spawn = require('child_process').spawn;
+                var child = spawn('HandBrakeCLI', params);
 
-            var child = spawn('HandBrakeCLI', params);
+                child.stdout.on('data', function (chunk) {
+                    var output = chunk.toString();
 
-            child.stdout.on('data', function (chunk) {
-                var output = chunk.toString();
+                    if ($verbose) {
+                        console.log("output = ", output);
+                    }
+                });
 
-                if ($verbose) {
-                    console.log("output = ", output);
-                }
-            });
+                child.on('exit', function (code, signal) {
+                    if (code > 0) {
+                        reject('Process exited with code = ' + code + ', SIGNAL = ' + signal);
+                    }
+                });
 
-            child.on('exit', function (code, signal) {
-                if (code > 0) {
-                    defer.reject('Process exited with code = ' + code + ', SIGNAL = ' + signal);
-                }
-            });
-
-            child.on('close', function (code) {
-                if (code === 0) {
-                    defer.resolve({source: source, destination: destination, destinationFile: destinationFile});
-                } else {
-                    defer.reject('Process exited with code = ' + code);
-                }
-            });
-        }
-
-        return defer.promise();
+                child.on('close', function (code) {
+                    if (code === 0) {
+                        resolve({source: source, destination: destination, destinationFile: destinationFile});
+                    } else {
+                        reject('Process exited with code = ' + code);
+                    }
+                });
+            }
+        });
     },
 
     /**
@@ -199,27 +195,25 @@ Converter.prototype = {
      * @returns {Promise}
      */
     _getCameraModel: function (source) {
-        var defer = vow.defer();
-        var spawn = require('child_process').spawn;
+        return new Promise(function (resolve, reject) {
+            var spawn = require('child_process').spawn;
+            var child = spawn('exiftool', [source]);
+            var model = '';
+                child.stdout.on('data', function (chunk) {
+                var output = chunk.toString();
+                var start = output.indexOf('Model');
+                var end = output.indexOf('Software');
+                model = output.substr(start, end - start);
+            });
 
-        var child = spawn('exiftool', [source]);
-        var model = '';
-            child.stdout.on('data', function (chunk) {
-            var output = chunk.toString();
-            var start = output.indexOf('Model');
-            var end = output.indexOf('Software');
-            model = output.substr(start, end - start);
+            child.on('close', function (code) {
+                if (code === 0) {
+                    resolve(model);
+                } else {
+                    reject('_getCameraModel Process exited with code = ' + code);
+                }
+            });
         });
-
-        child.on('close', function (code) {
-            if (code === 0) {
-                defer.resolve(model);
-            } else {
-                defer.reject('_getCameraModel Process exited with code = ' + code);
-            }
-        });
-
-        return defer.promise();
     },
 
     /**
@@ -231,19 +225,18 @@ Converter.prototype = {
      */
     _getEntries: function (root) {
         var entryType = 'files';
-        var defer = vow.defer();
-        var entries = [];
-        readdirp({root: root, entryType: entryType, fileFilter: ['*.mov', '*.MOV']})
-            .on('data', function (entry) {
-                entries.push(entry.fullPath);
-            }.bind(this))
-            .on('end', function () {
-                entries.sort(this._sortFunction);
-                defer.resolve(entries);
-            }.bind(this))
-            .on('error', defer.reject);
-
-        return defer.promise();
+        return new Promise(function (resolve, reject) {
+            var entries = [];
+            readdirp({root: root, entryType: entryType, fileFilter: ['*.mov', '*.MOV']})
+                .on('data', function (entry) {
+                    entries.push(entry.fullPath);
+                }.bind(this))
+                .on('end', function () {
+                    entries.sort(this._sortFunction);
+                    resolve(entries);
+                }.bind(this))
+                .on('error', reject);
+        });
     },
 
     /**
