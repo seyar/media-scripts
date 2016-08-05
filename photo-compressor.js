@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 var readdirp = require('readdirp');
-var vow = require('vow');
 var fs = require('fs');
 var path = require('path');
 
@@ -83,7 +82,9 @@ Compressor.prototype = {
                 if ($all === true && (this._current <= this._files.length - 1)) {
                     return this._convertRecursive();
                 } else {
-                    return vow.resolve();
+                    return new Promise(function (resolve) {
+                        resolve();
+                    });
                 }
             }, this);
     },
@@ -96,46 +97,45 @@ Compressor.prototype = {
      * @returns {Promise}
      */
     _convert: function (source, destination) {
-        var defer = vow.defer();
-        var spawn = require('child_process').spawn;
-        //var destinationFile = destination + '/' + path.basename(source, path.extname(source)) + '.mp4';
-        var destinationFile = source;
+        return new Promise(function (resolve, reject) {
+            var spawn = require('child_process').spawn;
+            //var destinationFile = destination + '/' + path.basename(source, path.extname(source)) + '.mp4';
+            var destinationFile = source;
 
-        console.log('converting %s -> %s', source, destinationFile);
+            console.log('converting %s -> %s', source, destinationFile);
 
-        var params = [
-            '-strip',
-            '-quality', '75%',
-            source
-        ];
+            var params = [
+                '-strip',
+                '-quality', '75%',
+                source
+            ];
 
-        // convert -strip -interlace Plane -gaussian-blur 0.05 -quality 85% DSC_6332.JPG some.jpg
-        // mogrify -strip -quality 75%
-        var child = spawn('mogrify', params);
+            // convert -strip -interlace Plane -gaussian-blur 0.05 -quality 85% DSC_6332.JPG some.jpg
+            // mogrify -strip -quality 75%
+            var child = spawn('mogrify', params);
 
-        child.stdout.on('data', function (chunk) {
-            var output = chunk.toString();
+            child.stdout.on('data', function (chunk) {
+                var output = chunk.toString();
 
-            if ($verbose) {
-                console.log("output = ", output);
-            }
+                if ($verbose) {
+                    console.log("output = ", output);
+                }
+            });
+
+            child.on('exit', function (code, signal) {
+                if (code > 0) {
+                    reject('Process exited with code = ' + code + ', SIGNAL = ' + signal);
+                }
+            });
+
+            child.on('close', function (code) {
+                if (code === 0) {
+                    resolve({source: source, destination: destination, destinationFile: destinationFile});
+                } else {
+                    reject('Process exited with code = ' + code);
+                }
+            });
         });
-
-        child.on('exit', function (code, signal) {
-            if (code > 0) {
-                defer.reject('Process exited with code = ' + code + ', SIGNAL = ' + signal);
-            }
-        });
-
-        child.on('close', function (code) {
-            if (code === 0) {
-                defer.resolve({source: source, destination: destination, destinationFile: destinationFile});
-            } else {
-                defer.reject('Process exited with code = ' + code);
-            }
-        });
-
-        return defer.promise();
     },
 
     /**
@@ -145,27 +145,26 @@ Compressor.prototype = {
      * @returns {Promise}
      */
     _getCameraModel: function (source) {
-        var defer = vow.defer();
-        var spawn = require('child_process').spawn;
+        return new Promise(function (resolve, reject) {
+            var spawn = require('child_process').spawn;
 
-        var child = spawn('exiftool', [source]);
-        var model = '';
-            child.stdout.on('data', function (chunk) {
-            var output = chunk.toString();
-            var start = output.indexOf('Model');
-            var end = output.indexOf('Software');
-            model = output.substr(start, end - start);
+            var child = spawn('exiftool', [source]);
+            var model = '';
+                child.stdout.on('data', function (chunk) {
+                var output = chunk.toString();
+                var start = output.indexOf('Model');
+                var end = output.indexOf('Software');
+                model = output.substr(start, end - start);
+            });
+
+            child.on('close', function (code) {
+                if (code === 0) {
+                    resolve(model);
+                } else {
+                    reject('_getCameraModel Process exited with code = ' + code);
+                }
+            });
         });
-
-        child.on('close', function (code) {
-            if (code === 0) {
-                defer.resolve(model);
-            } else {
-                defer.reject('_getCameraModel Process exited with code = ' + code);
-            }
-        });
-
-        return defer.promise();
     },
 
     /**
@@ -177,21 +176,20 @@ Compressor.prototype = {
      */
     _getEntries: function (root) {
         var entryType = 'files';
-        var defer = vow.defer();
-        var entries = [];
-        readdirp({root: root, entryType: entryType, fileFilter: ['*.jpg', '*.JPG']})
-            .on('data', function (entry) {
-                if (entry.stat.size >= MIN_SIZE) {
-                    entries.push(entry.fullPath);
-                }
-            }.bind(this))
-            .on('end', function () {
-                entries.sort(this._sortFunction);
-                defer.resolve(entries);
-            }.bind(this))
-            .on('error', defer.reject);
-
-        return defer.promise();
+        return new Promise(function (resolve, reject) {
+            var entries = [];
+            readdirp({root: root, entryType: entryType, fileFilter: ['*.jpg', '*.JPG']})
+                .on('data', function (entry) {
+                    if (entry.stat.size >= MIN_SIZE) {
+                        entries.push(entry.fullPath);
+                    }
+                }.bind(this))
+                .on('end', function () {
+                    entries.sort(this._sortFunction);
+                    resolve(entries);
+                }.bind(this))
+                .on('error', reject);
+        });
     },
 
     /**
