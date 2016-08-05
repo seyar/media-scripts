@@ -5,7 +5,7 @@ var vow = require('vow');
 var fs = require('fs');
 var path = require('path');
 
-var SOURCE = '/Volumes/FAT/media/photos/2015/5-May';
+var SOURCE = '/Users/seyar/media';
 var MIN_SIZE = 4194304; // 4mb
 
 $all = false;

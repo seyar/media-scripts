@@ -7,7 +7,8 @@ var vow = require('vow');
 var fs = require('fs');
 var path = require('path');
 
-var SOURCE = '/Volumes/FAT/media/video';
+var SOURCE = '/Users/seyar/media/video';
+//var SOURCE = '/Volumes/FAT/media/video';
 
 $all = false;
 $verbose = false;
