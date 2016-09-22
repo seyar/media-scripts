@@ -26,13 +26,13 @@ var Compressor = function () {
             this._files = files;
             return this._convertRecursive();
         }, this)
-        .fail(function (e) {
+        .catch(function (e) {
             var currentFile = this._files[this._current];
             var dest = path.dirname(currentFile);
             //fs.unlink(dest + '/' + path.basename(currentFile, path.extname(currentFile)) + '.mp4', function () {});
             throw new Error(e);
         }, this)
-        .done(function () {
+        .then(function () {
             console.log('Files converted');
         });
 };
