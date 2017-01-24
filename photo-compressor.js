@@ -86,14 +86,25 @@ function convert(source, destination) {
         }
 
         var params = [
-            '-strip',
-            '-quality', 
-            '75%',
+            // '-strip',
+            '-filter', 'Triangle',
+            '-define', 'filter:support=2',
+            '-unsharp', '0.25x0.08+8.3+0.045',
+            '-dither', 'None',
+            '-posterize', 136,
+            '-quality', 75, 
+            '-define', 'jpeg:fancy-upsampling=off',
+            '-define', 'png:compression-filter=5', 
+            '-define', 'png:compression-level=9', 
+            '-define', 'png:compression-strategy=1',
+            '-define', 'png:exclude-chunk=all', 
+            '-interlace', 'none',
+            '-colorspace', 'sRGB',
             source
         ];
 
-        // convert -strip -interlace Plane -gaussian-blur 0.05 -quality 85% DSC_6332.JPG some.jpg
         // mogrify -strip -quality 75%
+        // mogrify -filter Triangle -define filter:support=2 -unsharp 0.25x0.08+8.3+0.045 -dither None -posterize 136 -quality 82 -define jpeg:fancy-upsampling=off -define png:compression-filter=5 -define png:compression-level=9 -define png:compression-strategy=1 -define png:exclude-chunk=all -interlace none -colorspace sRGB some.jpg
         var child = spawn('mogrify', params);
 
         child.stdout.on('data', function (chunk) {
