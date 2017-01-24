@@ -1,3 +1,5 @@
+# photo-compressor
+
 # video-converter
 ----
 Wrapper to HandBrakeCli for recursive convert MOV -> mp4 and delete originals.
