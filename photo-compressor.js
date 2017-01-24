@@ -97,9 +97,8 @@ function convert(source, destination) {
         var child = spawn('mogrify', params);
 
         child.stdout.on('data', function (chunk) {
-            var output = chunk.toString();
-
             if (verbose) {
+                var output = chunk.toString();
                 console.log("output = ", output);
             }
         });
