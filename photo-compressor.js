@@ -5,7 +5,7 @@ var fs = require('fs');
 var path = require('path');
 
 var source = '/Users/seyar/media';
-var MIN_SIZE = 4194304; // 4mb
+var MIN_SIZE = 2097152; // 2mb
 
 var all = false;
 var verbose = false;
@@ -87,17 +87,17 @@ function convert(source, destination) {
 
         var params = [
             // '-strip',
-            '-filter', 'Triangle',
-            '-define', 'filter:support=2',
-            '-unsharp', '0.25x0.08+8.3+0.045',
-            '-dither', 'None',
-            '-posterize', 136,
+            // '-filter', 'Triangle',
+            // '-define', 'filter:support=2',
+            // '-unsharp', '0.25x0.08+8.3+0.045',
+            // '-dither', 'None',
+            // '-posterize', 136,
             '-quality', 75, 
-            '-define', 'jpeg:fancy-upsampling=off',
-            '-define', 'png:compression-filter=5', 
-            '-define', 'png:compression-level=9', 
-            '-define', 'png:compression-strategy=1',
-            '-define', 'png:exclude-chunk=all', 
+            // '-define', 'jpeg:fancy-upsampling=off',
+            // '-define', 'png:compression-filter=5', 
+            // '-define', 'png:compression-level=9', 
+            // '-define', 'png:compression-strategy=1',
+            // '-define', 'png:exclude-chunk=all', 
             '-interlace', 'none',
             '-colorspace', 'sRGB',
             source
@@ -167,7 +167,7 @@ function sortFunction(a, b) {
 }
 
 if (showHelp) {
-    console.log('Compressor for photos. Compress photo more than 4mb. Usage:');
+    console.log('Compressor for photos. Compress photo more than 2mb. Usage:');
     console.log('You can pass a path in last param. Example: ./photo-compressor.js -v ~/photo-import');
     console.log('Default path is /Users/seyar/media');
     console.log('-a, --all  Compress all files in folder.');
