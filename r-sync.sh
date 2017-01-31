@@ -10,9 +10,7 @@ if [ -d "${BACKUPDIR}" ]; then
   mkdir -p   "${FOLDER}"
   #забекапим на внешний винт. Все вместе с симлинкой
   rsync -uraz --remove-source-files "$BASEDIR/" "${FOLDER}"
-  find . -type d -empty -delete
-  #rm -rf "$BASEDIR/photos"
-  #rm -rf "$BASEDIR/video"
+  find "${BASEDIR}" -type d -empty -delete
   echo "Синхронизировано с ${BACKUPDIR}"
 else
   echo "Не синхронизировано."
