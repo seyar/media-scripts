@@ -7,7 +7,7 @@ var path = require('path');
 var source = '/Users/seyar/media';
 var MIN_SIZE = 2097152; // 2mb
 
-var all = false;
+var all = true;
 var verbose = false;
 var showHelp = false;
 
