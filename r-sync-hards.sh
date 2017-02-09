@@ -14,8 +14,8 @@ if [ -d "${BACKUPDIR}" ]; then
   if [ -d "${FOLDER}" ]; then
     #забекапим на внешний винт. Все вместе с симлинкой
     rsync --update -raz "$BASEDIR" "${FOLDER}"
-    echo "Синхронизировано с ${BACKUPDIR}"
+    echo $(date -u) "Синхронизировано с ${BACKUPDIR}"
   fi
 else
-  echo "Не синхронизировано."
+    echo $(date -u) "Не синхронизировано."
 fi
