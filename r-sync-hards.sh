@@ -1,21 +1,11 @@
 #!/bin/bash
-#что синкаем
-BASEDIR="/Volumes/Data/media/"
-#Бекапный винт
-BACKUPDIR="/Volumes/otherdata/"
-#в какой папке мы запустили скрипт, такую же создадим на бекапном и положим файлы
-FOLDER=${BACKUPDIR}`basename "${BASEDIR}"`
+SOURCE="/Volumes/otherdata/media/"
+DESTINATION="seyar@192.168.0.151:/media/D/media/"
 
-if ! [ -d "${FOLDER}" ]; then
-  mkdir -p   "${FOLDER}"
-fi
-
-if [ -d "${BACKUPDIR}" ]; then
-  if [ -d "${FOLDER}" ]; then
-    #забекапим на внешний винт. Все вместе с симлинкой
-    rsync --update -raz "$BASEDIR" "${FOLDER}"
-    echo $(date -u) "Синхронизировано с ${BACKUPDIR}"
-  fi
+if [ -d "${SOURCE}" ]; then
+  #забекапим на внешний винт. Все вместе с симлинкой
+  rsync --ignore-existing --delete -raz $SOURCE ${DESTINATION}
+  echo $(date -u) "Синхронизировано с ${DESTINATION}"
 else
-    echo $(date -u) "Не синхронизировано."
+  echo $(date -u) "Не синхронизировано."
 fi
