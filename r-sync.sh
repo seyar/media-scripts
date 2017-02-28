@@ -2,7 +2,7 @@
 #что синкаем
 BASEDIR="/Users/seyar/media"
 #Бекапный винт
-BACKUPDIR="/Volumes/Data/"
+BACKUPDIR="/Volumes/otherdata/"
 #в какой папке мы запустили скрипт, такую же создадим на бекапном и положим файлы
 FOLDER=${BACKUPDIR}`basename "${BASEDIR}"`
 
