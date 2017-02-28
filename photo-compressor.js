@@ -5,9 +5,9 @@ var fs = require('fs');
 var path = require('path');
 
 var source = '/Users/seyar/media';
-var MIN_SIZE = 2097152; // 2mb
+var MIN_SIZE = 4097152; // ~4mb
 
-var all = true;
+var all = false;
 var verbose = false;
 var showHelp = false;
 
@@ -59,7 +59,7 @@ Compressor.prototype._convertRecursive = function () {
     return convert(this._files[i], dest)
         .then(function(){
             this._current++;
-            if (all === true && (this._current <= this._files.length - 1)) {
+            if (this._current <= this._files.length - 1) {
                 return this._convertRecursive();
             } else {
                 return new Promise(function (resolve) {
@@ -141,7 +141,7 @@ function getEntries(root) {
         var entries = [];
         readdirp({root: root, entryType: entryType, fileFilter: ['*.jpg', '*.JPG']})
             .on('data', function (entry) {
-                if (entry.stat.size >= MIN_SIZE) {
+                if (all || entry.stat.size >= MIN_SIZE) {
                     entries.push(entry.fullPath);
                 }
             }.bind(this))
