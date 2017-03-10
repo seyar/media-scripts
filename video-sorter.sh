@@ -3,7 +3,7 @@
 #Входная папка
 BASEDIR="${HOME}/media/video"
 #строка для грепа даты из экзива
-STRTIME="^Media Modify Date"
+STRTIME="^Media Create Date"
 STRTIME2="Date/Time Original"
 
 #название папок месяцами
