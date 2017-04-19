@@ -9,7 +9,7 @@ FOLDER=${BACKUPDIR}`basename "${BASEDIR}"`
 if [ -d "${BACKUPDIR}" ]; then
   mkdir -p   "${FOLDER}"
   #забекапим на внешний винт. Все вместе с симлинкой
-  rsync -uraz --remove-source-files "$BASEDIR/" "${FOLDER}"
+  rsync -abviuzP --remove-source-files "$BASEDIR/" "${FOLDER}"
   find "${BASEDIR}" -type d -empty -delete
   echo $(date -u) "Синхронизировано с ${BACKUPDIR}"
 else
