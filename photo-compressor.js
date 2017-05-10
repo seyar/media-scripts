@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @deprecated. use sorter.js
 
 var readdirp = require('readdirp');
 var fs = require('fs');
@@ -24,7 +25,7 @@ process.argv.forEach(function (val) {
 });
 
 try {
-    var source = fs.realpathSync(process.argv[process.argv.length -1]);    
+    var source = fs.realpathSync(process.argv[process.argv.length -1]);
 } catch (e) {}
 
 var Compressor = function () {
@@ -91,12 +92,12 @@ function convert(source, destination) {
             // '-unsharp', '0.25x0.08+8.3+0.045',
             // '-dither', 'None',
             // '-posterize', 136,
-            '-quality', 75, 
+            '-quality', 75,
             // '-define', 'jpeg:fancy-upsampling=off',
-            // '-define', 'png:compression-filter=5', 
-            // '-define', 'png:compression-level=9', 
+            // '-define', 'png:compression-filter=5',
+            // '-define', 'png:compression-level=9',
             // '-define', 'png:compression-strategy=1',
-            // '-define', 'png:exclude-chunk=all', 
+            // '-define', 'png:exclude-chunk=all',
             '-interlace', 'none',
             '-colorspace', 'sRGB',
             source
