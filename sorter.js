@@ -23,7 +23,8 @@ var MONTHS = [
     'December'
 ];
 
-var destination = '/photos/';
+var DEFAULT_DEST = '/photos/';
+var destination = DEFAULT_DEST;
 var source = process.cwd();
 programm
     .version(packageJson.version)
@@ -215,7 +216,7 @@ function getPath(entry, destination) {
         path.basename(entry.filePath)].join(path.sep));
 }
 
-if (!source || !destination) {
+if (!source || !destination || destination === DEFAULT_DEST) {
     console.log('no source="%s" or destination="%s"', source, destination);
     return;
 }
