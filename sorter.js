@@ -48,37 +48,55 @@ class Sorter {
 
     compress() {
         return this._entries
-            .then((files) => {
-                return Promise.all(files.map((fileName) =>
-                    compress(path.normalize([this._source, fileName].join(path.sep)))
-                ));
-            })
+            .then((files) => this._chunkify(files, compress))
             .catch(console.log)
             .then(() => {
                 console.log('Files compressed');
-            })
-            .catch(console.log);
+            });
     }
 
     sort() {
         return this._entries
             .then((files) => {
-                return Promise.all(files.map((fileName) =>
-                    getExifInfo(path.normalize([this._source, fileName].join(path.sep)))
-                ));
-            })
-            .then((entries) => {
-                return Promise.all(entries.map((entry) => {
-                    var savePath = getPath(entry, this._destination);
-                    if (savePath) {
-                        return copy(entry.filePath, savePath);
-                    }
-                }).filter(Boolean));
+                var handler = (source) => {
+                    return getExifInfo(source)
+                        .then((exifInfo) => {
+                            var savePath = generatePath(exifInfo, this._destination);
+                            if (savePath) {
+                                return copy(source, savePath);
+                            }
+                        });
+                };
+                return this._chunkify(files, handler)
+                    .then((result) => result ? files.map(this._normalizePath.bind(this)) : [])
+                    .catch(console.log);
             })
             .then(removeFiles)
+            .catch(console.log)
             .then(() => {
                 console.log('Done copying');
             });
+    }
+
+    _chunkify(files, handler) {
+        files = files.slice();
+        var paths = files.map(this._normalizePath.bind(this));
+        var compressCount = 10;
+
+        return Promise.all(paths.slice(0, compressCount).map(handler.bind(this)))
+            .then(() => {
+                files.splice(0, compressCount);
+                if (files.length > 0) {
+                    return this._chunkify(files, handler);
+                } else {
+                    return true;
+                }
+            })
+            .catch(console.log);
+    }
+
+    _normalizePath(file) {
+        return path.normalize([this._source, file].join(path.sep));
     }
 }
 
@@ -97,7 +115,7 @@ function getEntries(path) {
 function compress(filePath) {
     console.log('Compressing %s', filePath);
 
-    return new Promise(function (resolve, reject) {
+    return new Promise((resolve, reject) => {
         var spawn = require('child_process').spawn;
 
         var params = [
@@ -124,7 +142,7 @@ function compress(filePath) {
 }
 
 function getExifInfo(filePath) {
-    return new Promise(function (resolve, reject) {
+    return new Promise((resolve, reject) => {
         var spawn = require('child_process').spawn;
 
         var params = [
@@ -194,7 +212,7 @@ function removeFiles(files) {
  * @param {String} destination
  * @returns {String|Boolean}
  */
-function getPath(entry, destination) {
+function generatePath(entry, destination) {
     var dateString = entry.DateTimeOriginal ?
         entry.DateTimeOriginal : entry.DateTimeDigitized ?
             entry.DateTimeDigitized : entry.DateTime;
