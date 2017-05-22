@@ -228,7 +228,7 @@ function generatePath(entry, destination) {
         return false;
     }
 
-    var monthNumber = date.getMonth() + 1;
+    var monthNumber = date.getMonth();
 
     return path.normalize([destination, date.getFullYear(), monthNumber + '-' + MONTHS[monthNumber], entry.Model,
         path.basename(entry.filePath)].join(path.sep));
