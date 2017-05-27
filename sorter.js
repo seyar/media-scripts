@@ -43,36 +43,31 @@ class Sorter {
         this._destination = destination;
 
         this._entries = getEntries(source)
-            .catch(console.log);
+            .catch((e) => {throw e});
     }
 
     compress() {
         return this._entries
             .then((files) => this._chunkify(files, compress))
-            .catch(console.log)
+            .catch((e) => {throw e})
             .then(() => {
                 console.log('Files compressed');
             });
     }
 
     sort() {
+        var handler = (source) =>
+            getExifInfo(source)
+                .then((exifInfo) => copy(source, generatePath(exifInfo, this._destination)));
+
         return this._entries
-            .then((files) => {
-                var handler = (source) => {
-                    return getExifInfo(source)
-                        .then((exifInfo) => {
-                            var savePath = generatePath(exifInfo, this._destination);
-                            if (savePath) {
-                                return copy(source, savePath);
-                            }
-                        });
-                };
-                return this._chunkify(files, handler)
+            .then((files) =>
+                this._chunkify(files, handler)
                     .then((result) => result ? files.map(this._normalizePath.bind(this)) : [])
-                    .catch(console.log);
-            })
+            )
+            .catch((e) => {throw e})
             .then(removeFiles)
-            .catch(console.log)
+            .catch((e) => {throw e})
             .then(() => {
                 console.log('Done copying');
             });
@@ -84,6 +79,7 @@ class Sorter {
         var compressCount = 10;
 
         return Promise.all(paths.slice(0, compressCount).map(handler.bind(this)))
+            .catch((e) => Promise.reject(e))
             .then(() => {
                 files.splice(0, compressCount);
                 if (files.length > 0) {
@@ -91,8 +87,7 @@ class Sorter {
                 } else {
                     return true;
                 }
-            })
-            .catch(console.log);
+            });
     }
 
     _normalizePath(file) {
@@ -183,6 +178,10 @@ function getExifInfo(filePath) {
 }
 
 function copy(source, destination) {
+    if (!destination) {
+        return Promise.reject(`No source or destination ${source} -> ${destination}`);
+    };
+
     console.log('Copying %s -> %s ', source, destination);
 
     var destinationDir = path.dirname(destination);
@@ -218,6 +217,7 @@ function generatePath(entry, destination) {
             entry.DateTimeDigitized : entry.DateTime;
 
     if (!dateString) {
+        throw 'Exif data date is absent';
         return false;
     }
 
@@ -225,6 +225,7 @@ function generatePath(entry, destination) {
     var date = new Date(parsed[1], parsed[2], parsed[3]);
 
     if (!date) {
+        throw 'No date object'
         return false;
     }
 
@@ -242,4 +243,6 @@ if (!source || !destination || destination === DEFAULT_DEST) {
 var sorter = new Sorter(source, destination);
 sorter
     .compress()
-    .then(sorter.sort.bind(sorter));
+    .catch(console.error)
+    .then(() => sorter.sort())
+    .catch(console.error);
