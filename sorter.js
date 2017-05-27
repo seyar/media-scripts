@@ -26,10 +26,13 @@ var MONTHS = [
 var DEFAULT_DEST = '/photos/';
 var destination = DEFAULT_DEST;
 var source = process.cwd();
+
 programm
     .version(packageJson.version)
     .description('sort and compress photos')
     .usage('<source> <destination>')
+    .option('-c, --compress', 'Compress only')
+    .option('-s, --sort', 'Sort only')
     .arguments('<source> <destination>')
     .action((s, d) => {
         source = s;
@@ -241,8 +244,18 @@ if (!source || !destination || destination === DEFAULT_DEST) {
 }
 
 var sorter = new Sorter(source, destination);
-sorter
-    .compress()
-    .catch(console.error)
-    .then(() => sorter.sort())
-    .catch(console.error);
+if (programm.compress) {
+    sorter
+        .compress()
+        .catch(console.error);
+} else if (programm.sort) {
+    sorter
+        .sort()
+        .catch(console.error);
+} else {
+    sorter
+        .compress()
+        .catch(console.error)
+        .then(() => sorter.sort())
+        .catch(console.error);
+}
