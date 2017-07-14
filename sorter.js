@@ -61,15 +61,19 @@ class Sorter {
     sort() {
         var handler = (source) =>
             getExifInfo(source)
-                .then((exifInfo) => copy(source, generatePath(exifInfo, this._destination)));
+                .then((exifInfo) => {
+                    var path = generatePath(exifInfo, this._destination, source);
+
+                    return path ? copy(source, path) : false;
+                })
+                .then((source) => source && fs.unlink(source))
+                .catch((e) => {throw e});
 
         return this._entries
             .then((files) =>
                 this._chunkify(files, handler)
                     .then((result) => result ? files.map(this._normalizePath.bind(this)) : [])
             )
-            .catch((e) => {throw e})
-            .then(removeFiles)
             .catch((e) => {throw e})
             .then(() => {
                 console.log('Done copying');
@@ -212,15 +216,17 @@ function removeFiles(files) {
 /**
  * @param {Object} entry
  * @param {String} destination
+ * @param {String} source
  * @returns {String|Boolean}
  */
-function generatePath(entry, destination) {
+function generatePath(entry, destination, source) {
     var dateString = entry.DateTimeOriginal ?
         entry.DateTimeOriginal : entry.DateTimeDigitized ?
             entry.DateTimeDigitized : entry.DateTime;
 
     if (!dateString) {
-        throw 'Exif data date is absent';
+        //throw 'Exif data date is absent ' + source;
+        console.error('Exif data date is absent ' + source);
         return false;
     }
 
