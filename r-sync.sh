@@ -1,17 +1,19 @@
 #!/bin/bash
-#что синкаем
-BASEDIR="/Users/seyar/media"
-#Бекапный винт
-BACKUPDIR="/Volumes/otherdata/"
-#в какой папке мы запустили скрипт, такую же создадим на бекапном и положим файлы
-FOLDER=${BACKUPDIR}`basename "${BASEDIR}"`
 
-if [ -d "${BACKUPDIR}" ]; then
-  mkdir -p   "${FOLDER}"
-  #забекапим на внешний винт. Все вместе с симлинкой
-  rsync -abviuzP --remove-source-files "$BASEDIR/" "${FOLDER}"
-  find "${BASEDIR}" -type d -empty -delete
-  echo $(date -u) "Синхронизировано с ${BACKUPDIR}"
-else
-  echo $(date -u) "Не синхронизировано."
-fi
+# Источник.
+SOURCE_DIR="$1/"
+# Приемник. Бекапный винт. Папка должна существовать.
+DESTINATION_DIR="$2/"
+
+function sync() {
+    if [ -d ${DESTINATION_DIR} ]; then
+      mkdir -p $FOLDER
+      rsync -abviuzP --remove-source-files $SOURCE_DIR $DESTINATION_DIR
+
+      echo $(date -u) "Синхронизировано с ${DESTINATION_DIR}"
+    else
+      echo $(date -u) "Не синхронизировано."
+    fi
+}
+
+sync $arg1 $arg2 || exit 0
